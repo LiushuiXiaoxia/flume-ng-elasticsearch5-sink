@@ -11,6 +11,16 @@ loader) seems difficult to find another solution. The best way, without
 modifying Flume, would be a new ElasticSearch sink based on http API and 
 built on top of a reactive framework.
 
+
+**问题描述**
+
+服务器使用ELK来收集日志，需要批量发送数据，有时候会出现一批数据中，只有部分数据发送成功，结果没有明确给出哪条数据成功或者失败。所以需要重复发送，这样就会导致原先已经发送成功的数据存在重复问题。
+
+**解决方案**
+
+调研得出，每次发送数据，ElasticSearch不检查数据是否存在，直接保存和插入的，我们可以在原先的数据中申明本条数据的主键ID，那么ElasticSearch自己就不会自动生成ID，而使用数据中已经存在的ID，然后发送重复数据的时候，就会先校验数据是否已经存在，然后再插入。
+那么问题来了，如果自己生成ID呢，并且保证同一条数据每次生成的ID都是一样的，所以考虑使用Hash的方法，最终选定使用sha1算法。考虑到APM数据中含有时间错和客户端的UUID，这样每条数据基本上不会出现重复问题，并且ElasticSearch中数据只会保存三天时间，就算有重复概率，也是比较小的，综合考虑利大于弊。
+
 ## Modifications to your Flume lib path:
     
 ### Libraries to be added:
