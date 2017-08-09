@@ -19,18 +19,14 @@
 package org.apache.flume.sink.elasticsearch.client;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
+import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
 import org.apache.flume.sink.elasticsearch.ElasticSearchEventSerializer;
 import org.apache.flume.sink.elasticsearch.IndexNameBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
@@ -39,6 +35,12 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.elasticsearch.common.bytes.BytesReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Rest ElasticSearch client which is responsible for sending bulks of events to
@@ -50,6 +52,7 @@ public class  ElasticSearchRestClient implements ElasticSearchClient {
   private static final String INDEX_OPERATION_NAME = "index";
   private static final String INDEX_PARAM = "_index";
   private static final String TYPE_PARAM = "_type";
+  private static final String ID_PARAM = "_id";
   private static final String TTL_PARAM = "_ttl";
   private static final String BULK_ENDPOINT = "_bulk";
 
@@ -57,10 +60,10 @@ public class  ElasticSearchRestClient implements ElasticSearchClient {
 
   private final ElasticSearchEventSerializer serializer;
   private final RoundRobinList<String> serversList;
-  
+
   private StringBuilder bulkBuilder;
   private HttpClient httpClient;
-  
+
   public ElasticSearchRestClient(String[] hostNames,
       ElasticSearchEventSerializer serializer) {
 
@@ -94,10 +97,14 @@ public class  ElasticSearchRestClient implements ElasticSearchClient {
   @Override
   public void addEvent(Event event, IndexNameBuilder indexNameBuilder, String indexType, long ttlMs) throws Exception {
     BytesReference content = serializer.getContentBuilder(event).bytes();
+    String contentText = content.utf8ToString();
+
     Map<String, Map<String, String>> parameters = new HashMap<String, Map<String, String>>();
     Map<String, String> indexParameters = new HashMap<String, String>();
     indexParameters.put(INDEX_PARAM, indexNameBuilder.getIndexName(event));
     indexParameters.put(TYPE_PARAM, indexType);
+    // custom _id,  _id = sha1(contentText)
+    indexParameters.put(ID_PARAM, Hashing.sha1().hashString(contentText, Charsets.UTF_8).toString());
     if (ttlMs > 0) {
       indexParameters.put(TTL_PARAM, Long.toString(ttlMs));
     }
@@ -107,7 +114,7 @@ public class  ElasticSearchRestClient implements ElasticSearchClient {
     synchronized(bulkBuilder) {
       bulkBuilder.append(gson.toJson(parameters));
       bulkBuilder.append("\n");
-      bulkBuilder.append(content.utf8ToString());
+      bulkBuilder.append(contentText);
       bulkBuilder.append("\n");
     }
   }

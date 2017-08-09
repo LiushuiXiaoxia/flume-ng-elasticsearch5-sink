@@ -47,16 +47,16 @@
 
     <repositories>
 
-        <repository>
-            <id>public</id>
-            <url>http://10.92.1.84:8081/nexus/content/groups/public</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
+        <!--<repository>-->
+            <!--<id>public</id>-->
+            <!--<url>http://10.92.1.84:8081/nexus/content/groups/public</url>-->
+            <!--<releases>-->
+                <!--<enabled>true</enabled>-->
+            <!--</releases>-->
+            <!--<snapshots>-->
+                <!--<enabled>true</enabled>-->
+            <!--</snapshots>-->
+        <!--</repository>-->
 
         <repository>
             <id>repo1.maven.org</id>
